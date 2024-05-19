@@ -1,0 +1,110 @@
+import discord
+from discord.ext import commands
+from apikeys import *
+import json
+from discord import FFmpegPCMAudio
+import ffmpeg
+import os
+
+intents = discord.Intents.all()
+intents.members = True
+
+queues = {}
+
+def check_queue(ctx, id):
+    if queues[id] != []:
+        voice = ctx.guild.voice_client
+        source = queues[id].pop(0)
+        player = voice.play(source)
+
+
+bot = discord.Client(intents=intents)
+client = commands.Bot(command_prefix= '!', intents=intents)
+
+@client.event
+async def on_ready():
+    print("The bot is now ready for use!")
+    print("------------------------------")
+
+@client.command()
+async def hello(ctx):
+    await ctx.send("Hai, i am Uberbot :3")
+
+@client.command()
+async def goodbye(ctx):
+    await ctx.send("yerp yerp :3")
+
+@client.event
+async def on_member_join(member):
+    channel = client.get_channel(1232506698191601747)
+    await channel.send("Hai, Welcome to the Cuckshed :3")
+
+@client.event
+async def on_member_remove(member):
+    channel = client.get_channel(1232506698191601747)
+    await channel.send("Bye bye :3")
+
+@client.command(pass_context = True)
+async def join(ctx):
+    if (ctx.author.voice):
+        channel = ctx.message.author.voice.channel
+        voice = await channel.connect()
+        source = FFmpegPCMAudio('Maxwell.wav')
+        player = voice.play(source)
+    else:
+        await ctx.send("It seems you are not in a voice channel, please join a voice channel to use this command :3")
+
+@client.command(pass_context = True)
+async def leave(ctx):
+    if (ctx.voice_client):
+        await ctx.guild.voice_client.disconnect()
+        await ctx.send("I have left the voice channel :3")
+    else:
+        await ctx.send("I am not in a voice channel :3")
+
+@client.command(pass_context = True)
+async def pause(ctx):
+    voice = discord.utils.get(client.voice_clients,guild=ctx.guild)
+    if voice.is_playing():
+        voice.pause()
+    else:
+        await ctx.send("There is no audio playing in the voice channel :3")
+
+@client.command(pass_context = True)
+async def resume(ctx):
+    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+    if voice.is_paused():
+        voice.resume()
+    else:
+        await ctx.send("No song is pause at the moment :3")
+
+@client.command(pass_context = True)
+async def stop(ctx):
+    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+    voice.stop()
+
+@client.command(pass_context = True)
+async def play(ctx, arg):
+    voice = ctx.guild.voice_client
+    song = arg + '.wav'
+    source = FFmpegPCMAudio(song)
+    player = voice.play(source, after=lambda x=None: check_queue(ctx, ctx.message.guild.id))
+
+@client.command(pass_context = True)
+async def queue(ctx, arg):
+    voice = ctx.guild.voice_client
+    song = arg + '.wav'
+    source = FFmpegPCMAudio(song)
+
+    guild_id = ctx.message.guild.id
+
+    if guild_id in queues:
+        queues[guild_id].append(source)
+
+    else:
+        queues[guild_id] = source
+
+    await ctx.send("Added to the queue :3")
+
+
+client.run(BOTTOKEN)
